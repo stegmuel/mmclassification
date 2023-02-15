@@ -11,15 +11,15 @@ from .base_dataset import BaseDataset
 from .builder import DATASETS
 
 
-def untar_to_dst(args, src):
-    assert (args['untar_path'] != "")
+def untar_to_dst(untar_path, src):
+    assert (untar_path != "")
 
-    if args['untar_path'][0] == '$':
-        args['untar_path'] = os.environ[args['untar_path'][1:]]
+    if untar_path[0] == '$':
+        untar_path = os.environ[untar_path[1:]]
     start_copy_time = time.time()
 
     with tarfile.open(src, 'r') as f:
-        f.extractall(args['untar_path'])
+        f.extractall(untar_path)
     print('Time taken for untar:', time.time() - start_copy_time)
 
     time.sleep(5)
@@ -34,9 +34,9 @@ class CellsDataset(BaseDataset):
                  classes=None,
                  ann_file=None,
                  test_mode=False,
-                 args=None,
+                 untar_path=None,
                  ):
-        self.args = args
+        self.untar_path = untar_path
         super(CellsDataset, self).__init__(data_prefix, pipeline, classes, ann_file, test_mode)
 
     def load_annotations(self):
@@ -44,9 +44,9 @@ class CellsDataset(BaseDataset):
 
         # Untar if needed
         if self.data_prefix.endswith('.tar'):
-            untar_to_dst(self.args, self.data_prefix)
+            untar_to_dst(self.untar_path, self.data_prefix)
             dataset_dir = self.data_prefix.split('/')[-1].split('.')[0]
-            self.data_prefix = os.path.join(self.args['untar_path'], dataset_dir)
+            self.data_prefix = os.path.join(self.untar_path, dataset_dir)
             print(self.data_prefix)
 
         data_infos = []
