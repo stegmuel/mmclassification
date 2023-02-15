@@ -22,7 +22,9 @@ def untar_to_dst(untar_path, src):
         f.extractall(untar_path)
     print('Time taken for untar:', time.time() - start_copy_time)
 
+    # Wait
     time.sleep(5)
+    return untar_path
 
 
 @DATASETS.register_module()
@@ -44,7 +46,7 @@ class CellsDataset(BaseDataset):
 
         # Untar if needed
         if self.data_prefix.endswith('.tar'):
-            untar_to_dst(self.untar_path, self.data_prefix)
+            self.untar_path = untar_to_dst(self.untar_path, self.data_prefix)
             dataset_dir = self.data_prefix.split('/')[-1].split('.')[0]
             self.data_prefix = os.path.join(self.untar_path, dataset_dir)
             print(self.data_prefix)
