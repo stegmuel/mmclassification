@@ -210,6 +210,7 @@ class VisionTransformer(BaseBackbone):
                  interpolate_mode='bicubic',
                  patch_cfg=dict(),
                  layer_cfgs=dict(),
+                 frozen_stages=-1,
                  init_cfg=None):
         super(VisionTransformer, self).__init__(init_cfg)
 
@@ -292,11 +293,16 @@ class VisionTransformer(BaseBackbone):
             _layer_cfg.update(layer_cfgs[i])
             self.layers.append(TransformerEncoderLayer(**_layer_cfg))
 
+        self.frozen_stages = frozen_stages
         self.final_norm = final_norm
         if final_norm:
             self.norm1_name, norm1 = build_norm_layer(
                 norm_cfg, self.embed_dims, postfix=1)
             self.add_module(self.norm1_name, norm1)
+
+        # freeze stages only when self.frozen_stages > 0
+        if self.frozen_stages > 0:
+            self._freeze_stages()
 
     @property
     def norm1(self):
@@ -337,6 +343,32 @@ class VisionTransformer(BaseBackbone):
     def resize_pos_embed(*args, **kwargs):
         """Interface for backward-compatibility."""
         return resize_pos_embed(*args, **kwargs)
+
+    def _freeze_stages(self):
+        # freeze position embedding
+        if self.pos_embed is not None:
+            self.pos_embed.requires_grad = False
+        # set dropout to eval model
+        self.drop_after_pos.eval()
+        # freeze patch embedding
+        self.patch_embed.eval()
+        for param in self.patch_embed.parameters():
+            param.requires_grad = False
+        # freeze cls_token
+        self.cls_token.requires_grad = False
+        # freeze layers
+        for i in range(1, self.frozen_stages + 1):
+            m = self.layers[i - 1]
+            m.eval()
+            for param in m.parameters():
+                param.requires_grad = False
+        # freeze the last layer norm
+        if self.frozen_stages == len(self.layers) and self.final_norm:
+            self.norm1.eval()
+            for param in self.norm1.parameters():
+                param.requires_grad = False
+
+        print(f"{self.frozen_stages} stages successfully frozen.")
 
     def forward(self, x):
         B = x.shape[0]
