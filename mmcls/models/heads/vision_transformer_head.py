@@ -1,15 +1,15 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import math
-from collections import OrderedDict
-
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from collections import OrderedDict
 from mmcv.cnn import build_activation_layer
 from mmcv.cnn.utils.weight_init import trunc_normal_
 from mmcv.runner import Sequential
 
-from ..builder import HEADS
 from .cls_head import ClsHead
+from ..builder import HEADS
 
 
 @HEADS.register_module()
@@ -72,8 +72,12 @@ class VisionTransformerClsHead(ClsHead):
 
     def pre_logits(self, x):
         if isinstance(x, tuple):
-            x = x[-1]
-        _, cls_token = x
+            if isinstance(x[0], list):
+                cls_token = torch.cat(list(zip(*x))[-1], dim=-1)
+            else:
+                cls_token = x[-1]
+        else:
+            _, cls_token = x
         if self.hidden_dim is None:
             return cls_token
         else:
