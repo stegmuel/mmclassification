@@ -1,9 +1,10 @@
 # Copyright (c) OpenMMLab. All rights reserved.
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..builder import HEADS
 from .cls_head import ClsHead
+from ..builder import HEADS
 
 
 @HEADS.register_module()
@@ -37,7 +38,11 @@ class LinearClsHead(ClsHead):
 
     def pre_logits(self, x):
         if isinstance(x, tuple):
-            x = x[-1]
+            if isinstance(x[0], list):
+                x = torch.cat(list(zip(*x))[-1], dim=-1)
+            else:
+                x = x[-1]
+            # x = x[-1]
         return x
 
     def simple_test(self, x, softmax=True, post_process=True):
