@@ -10,6 +10,22 @@ from PIL import Image
 from ..builder import PIPELINES
 
 
+def untar_to_dst(untar_path, src):
+    assert (untar_path != "")
+
+    if untar_path[0] == '$':
+        untar_path = os.environ[untar_path[1:]]
+    start_copy_time = time.time()
+
+    with tarfile.open(src, 'r') as f:
+        f.extractall(untar_path)
+    print('Time taken for untar:', time.time() - start_copy_time)
+
+    # Wait
+    time.sleep(5)
+    return untar_path
+
+
 @PIPELINES.register_module()
 class PastingPipeline(object):
     def __init__(self, cell_path, untar_path):
