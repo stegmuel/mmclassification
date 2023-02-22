@@ -1,3 +1,6 @@
+import os
+import tarfile
+import time
 from glob import glob
 from random import randint, choice
 
@@ -9,13 +12,24 @@ from ..builder import PIPELINES
 
 @PIPELINES.register_module()
 class PastingPipeline(object):
-    def __init__(self, cell_query):
-        self.cell_query = cell_query
-        self.cell_filepaths = self.get_cell_filepaths()
+    def __init__(self, cell_path, untar_path):
+        self.cell_path = cell_path
+        self.untar_path = untar_path
 
-    def get_cell_filepaths(self):
+        # Untar if needed
+        if self.cell_path.endswith('.tar'):
+            self.untar_path = untar_to_dst(self.untar_path, self.cell_path)
+            dataset_dir = self.cell_path.split('/')[-1].split('.')[0]
+            self.cell_path = os.path.join(self.untar_path, dataset_dir)
+            print(self.cell_path)
+
+        # Collect the cells
+        cell_query = os.path.join(self.cell_path, "*/*.jpg")
+        self.cell_filepaths = self.get_cell_filepaths(cell_query)
+
+    def get_cell_filepaths(self, cell_query):
         # Get all the available images
-        filepaths = [f for f in glob(self.cell_query, recursive=True)]
+        filepaths = [f for f in glob(cell_query, recursive=True)]
 
         # Split in positive/negative
         cells_filepaths = {

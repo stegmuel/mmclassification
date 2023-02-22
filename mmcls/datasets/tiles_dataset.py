@@ -1,11 +1,10 @@
-import mmcv
-import numpy as np
 import os
 import pickle
 import tarfile
 import time
-import torch
 from glob import glob
+
+import numpy as np
 
 from .base_dataset import BaseDataset
 from .builder import DATASETS
