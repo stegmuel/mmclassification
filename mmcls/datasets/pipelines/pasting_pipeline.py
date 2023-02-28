@@ -28,9 +28,12 @@ def untar_to_dst(untar_path, src):
 
 @PIPELINES.register_module()
 class PastingPipeline(object):
-    def __init__(self, cell_path, untar_path):
+    def __init__(self, cell_path, untar_path, random_paste=True, paste_mode='paste', paste_negatives=True):
         self.cell_path = cell_path
         self.untar_path = untar_path
+        self.random_paste = random_paste
+        self.paste_mode = paste_mode
+        self.paste_negatives = paste_negatives
 
         # Untar if needed
         if self.cell_path.endswith('.tar'):
@@ -58,43 +61,58 @@ class PastingPipeline(object):
         image = results['img']
         label = results['gt_label']
 
+        # Do nothing if we don't paste on negative images and the label is 0
+        if label == np.array(0) and not self.paste_negatives:
+            return results
+
         # Load the image
-        image_paste = image.copy()
+        im_pasted = np.array(image.copy())
 
         # Load the cell image
         str_label = 'positives' if label == np.array(1) else 'negatives'
         cell_path = choice(self.cell_filepaths[str_label])
         cell_image = np.array(Image.open(cell_path))
 
-        # Compute the location of the pasting site
+        # Crop the cell image if needed
         cell_h, cell_w, _ = cell_image.shape
-        image_h, image_w, _ = image.shape
-        if cell_h <= image_h:
-            max_r = image_h - cell_h
-        else:
-            max_r = 0
+        image_h, image_w, _ = im_pasted.shape
+        if cell_h > image_h:
             diff = cell_h - image_h
             low = diff // 2
             high = diff - low
             cell_image = cell_image[low: -high]
-        if cell_w <= image_w:
-            max_c = image_w - cell_w
-        else:
-            max_c = 0
+            cell_h = image_h
+        if cell_w > image_w:
             diff = cell_w - image_w
             left = diff // 2
             right = diff - left
             cell_image = cell_image[:, left: -right]
+            cell_w = image_w
 
-        paste_r = randint(0, max_r)
-        paste_c = randint(0, max_c)
+        # Compute the location of the pasting site
+        if self.random_paste:
+            max_r = image_h - cell_h
+            max_c = image_w - cell_w
+            center_y = randint(0, max_r)
+            center_x = randint(0, max_c)
+            center = (center_x + cell_image.shape[1] // 2, center_y + cell_image.shape[0] // 2)
+        else:
+            kernel = np.ones(cell_image.shape) / cell_image.size
+            convolved = fftconvolve(im_pasted, kernel, mode='valid').squeeze()
+            h, w = convolved.shape[:2]
+            center = rearrange(convolved, 'h w -> (h w)').argmax()
+            center_x = center % w
+            center_y = center // w
+            center = (center_x + cell_image.shape[1] // 2, center_y + cell_image.shape[0] // 2)
 
         # Paste
-        # lam = np.random.uniform(0., 1.0)
-        # Paste in rgb
-        # image_paste[paste_r: paste_r + cell_h, paste_c: paste_c + cell_w] = \
-        #     lam * image[paste_r: paste_r + cell_h, paste_c: paste_c + cell_w] + (1. - lam) * cell_image
-        image_paste[paste_r: paste_r + cell_h, paste_c: paste_c + cell_w] = cell_image
-
-        results['img'] = image_paste
+        if self.paste_mode == 'paste':
+            im_pasted[center_y: center_y + cell_h, center_x: center_x + cell_w] = cell_image
+        elif self.paste_mode == 'blend':
+            lam = np.random.uniform(0., 1.0)
+            im_pasted[center_y: center_y + cell_h, center_x: center_x + cell_w] = \
+                lam * im_pasted[center_y: center_y + cell_h, center_x: center_x + cell_w] + (1. - lam) * cell_image
+        else:
+            im_pasted = cv.seamlessClone(cell_image, im_pasted, 255 * np.ones_like(cell_image), center, cv.NORMAL_CLONE)
+        results['img'] = im_pasted
         return results
