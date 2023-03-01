@@ -11,6 +11,7 @@ import numpy as np
 from PIL import Image
 
 from ..builder import PIPELINES
+import torchvision.transforms as pth_transforms
 
 
 def untar_to_dst(untar_path, src):
@@ -31,12 +32,28 @@ def untar_to_dst(untar_path, src):
 
 @PIPELINES.register_module()
 class PastingPipeline(object):
-    def __init__(self, cell_path, untar_path, random_paste=True, paste_mode='paste', paste_negatives=True):
+    def __init__(self, cell_path, untar_path, random_paste=True, paste_mode='paste', paste_negatives=True,
+                 augment_cells=False):
         self.cell_path = cell_path
         self.untar_path = untar_path
         self.random_paste = random_paste
         self.paste_mode = paste_mode
         self.paste_negatives = paste_negatives
+        self.augment_cells = augment_cells
+        if augment_cells:
+            self.cell_transform = pth_transforms.Compose([
+                pth_transforms.RandomHorizontalFlip(),
+                pth_transforms.RandomHorizontalFlip(),
+                pth_transforms.RandomApply(
+                    [pth_transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1)],
+                    p=0.5
+                ),
+                pth_transforms.RandomApply(
+                    [pth_transforms.GaussianBlur(kernel_size=7)],
+                    p=0.2
+                ),
+                pth_transforms.RandomGrayscale(p=0.2),
+            ])
 
         # Untar if needed
         if self.cell_path.endswith('.tar'):
@@ -74,7 +91,11 @@ class PastingPipeline(object):
         # Load the cell image
         str_label = 'positives' if label == np.array(1) else 'negatives'
         cell_path = choice(self.cell_filepaths[str_label])
-        cell_image = np.array(Image.open(cell_path))
+        cell_image = Image.open(cell_path)
+        if self.augment_cells:
+            cell_image = self.cell_transform(cell_image)
+
+        cell_image = np.array(cell_image)
 
         # Crop the cell image if needed
         cell_h, cell_w, _ = cell_image.shape
