@@ -122,8 +122,8 @@ class PastingPipeline(object):
             center = (center_x + cell_image.shape[1] // 2, center_y + cell_image.shape[0] // 2)
         else:
             kernel = np.ones(cell_image.shape) / cell_image.size
-            convolved = fftconvolve(im_pasted, kernel, mode='valid').squeeze()
-            h, w = convolved.shape[:2]
+            convolved = fftconvolve(im_pasted, kernel, mode='valid').squeeze(-1)
+            h, w = convolved.shape
             center = rearrange(convolved, 'h w -> (h w)').argmax()
             center_x = center % w
             center_y = center // w
