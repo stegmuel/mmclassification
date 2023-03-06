@@ -12,6 +12,7 @@ from .transforms import (CenterCrop, ColorJitter, Lighting, Normalize, Pad,
                          RandomGrayscale, RandomResizedCrop, Resize)
 from .dino_pipeline import DinoPipelineTrain, DinoPipelineVal
 from .pasting_pipeline import PastingPipeline
+from .mixed_pasting_pipeline import MixedPastingPipeline
 
 __all__ = [
     'Compose', 'to_tensor', 'ToTensor', 'ImageToTensor', 'ToPIL', 'ToNumpy',
@@ -21,5 +22,5 @@ __all__ = [
     'ColorTransform', 'Solarize', 'Posterize', 'AutoContrast', 'Equalize',
     'Contrast', 'Brightness', 'Sharpness', 'AutoAugment', 'SolarizeAdd',
     'Cutout', 'RandAugment', 'Lighting', 'ColorJitter', 'RandomErasing', 'Pad',
-    'DinoPipelineVal', 'DinoPipelineTrain', 'PastingPipeline'
+    'DinoPipelineVal', 'DinoPipelineTrain', 'PastingPipeline', 'MixedPastingPipeline'
 ]
