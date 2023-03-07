@@ -2,7 +2,7 @@ import os
 import tarfile
 import time
 from glob import glob
-from random import randint, choice
+from random import randint, choice, uniform
 from einops import rearrange
 from scipy.signal import fftconvolve
 import cv2 as cv
@@ -32,7 +32,7 @@ def untar_to_dst(untar_path, src):
 
 @PIPELINES.register_module()
 class PastingPipeline(object):
-    def __init__(self, cell_path, untar_path, random_paste=True, paste_mode='paste', paste_negatives=True,
+    def __init__(self, cell_path, untar_path, random_paste=True, paste_mode='paste', paste_negatives=0.5,
                  augment_cells=False):
         self.cell_path = cell_path
         self.untar_path = untar_path
@@ -82,7 +82,7 @@ class PastingPipeline(object):
         label = results['gt_label']
 
         # Do nothing if we don't paste on negative images and the label is 0
-        if label == np.array(0) and not self.paste_negatives:
+        if label == np.array(0) and (self.paste_negatives > uniform(0., 1.)):
             return results
 
         # Load the image
