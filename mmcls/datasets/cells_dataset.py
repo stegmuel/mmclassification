@@ -1,30 +1,10 @@
-import mmcv
 import numpy as np
 import os
-import pickle
-import tarfile
-import time
-import torch
 from glob import glob
 
 from .base_dataset import BaseDataset
 from .builder import DATASETS
-
-
-def untar_to_dst(untar_path, src):
-    assert (untar_path != "")
-
-    if untar_path[0] == '$':
-        untar_path = os.environ[untar_path[1:]]
-    start_copy_time = time.time()
-
-    with tarfile.open(src, 'r') as f:
-        f.extractall(untar_path)
-    print('Time taken for untar:', time.time() - start_copy_time)
-
-    # Wait
-    time.sleep(5)
-    return untar_path
+from utils import untar_to_dst
 
 
 @DATASETS.register_module()
@@ -46,9 +26,7 @@ class CellsDataset(BaseDataset):
 
         # Untar if needed
         if self.data_prefix.endswith('.tar'):
-            self.untar_path = untar_to_dst(self.untar_path, self.data_prefix)
-            dataset_dir = self.data_prefix.split('/')[-1].split('.')[0]
-            self.data_prefix = os.path.join(self.untar_path, dataset_dir)
+            self.untar_path, self.data_prefix = untar_to_dst(self.untar_path, self.data_prefix)
             print(self.data_prefix)
 
         data_infos = []

@@ -8,8 +8,29 @@ import tarfile
 import urllib.error
 import urllib.request
 import zipfile
+import time
 
 __all__ = ['rm_suffix', 'check_integrity', 'download_and_extract_archive']
+
+
+def untar_to_dst(untar_path, src):
+    assert (untar_path != "")
+
+    if untar_path[0] == '$':
+        untar_path = os.environ[untar_path[1:]]
+    start_copy_time = time.time()
+
+    # Check if untar is needed
+    dataset_dir = src.split('/')[-1].split('.')[0]
+    dataset_dir = os.path.join(untar_path, dataset_dir)
+    if not os.path.exists(dataset_dir):
+        with tarfile.open(src, 'r') as f:
+            f.extractall(untar_path)
+    print('Time taken for untar:', time.time() - start_copy_time)
+
+    # Wait
+    time.sleep(5)
+    return untar_path, dataset_dir
 
 
 def rm_suffix(s, suffix=None):

@@ -1,6 +1,4 @@
 import os
-import tarfile
-import time
 from glob import glob
 from random import randint, choice, shuffle
 from einops import rearrange
@@ -13,22 +11,7 @@ from PIL import Image
 from ..builder import PIPELINES
 import torchvision.transforms as pth_transforms
 import pickle
-
-
-def untar_to_dst(untar_path, src):
-    assert (untar_path != "")
-
-    if untar_path[0] == '$':
-        untar_path = os.environ[untar_path[1:]]
-    start_copy_time = time.time()
-
-    with tarfile.open(src, 'r') as f:
-        f.extractall(untar_path)
-    print('Time taken for untar:', time.time() - start_copy_time)
-
-    # Wait
-    time.sleep(5)
-    return untar_path
+from ..utils import untar_to_dst
 
 
 @PIPELINES.register_module()
@@ -71,9 +54,9 @@ class MixedPastingPipeline(object):
             for dataset_name, dataset_data in self.cell_data[label].items():
                 # Untar if needed
                 if dataset_data['path'].endswith('.tar'):
-                    untar_path = untar_to_dst(self.untar_path, dataset_data['path'])
-                    dataset_dir = dataset_data['path'].split('/')[-1].split('.')[0]
-                    dataset_path = os.path.join(untar_path, dataset_dir)
+                    untar_path, dataset_path = untar_to_dst(self.untar_path, dataset_data['path'])
+                else:
+                    dataset_path = dataset_data['path']
 
                 # Store the cells
                 cell_paths = glob(f"{dataset_path}/{label}/*.jpg")
