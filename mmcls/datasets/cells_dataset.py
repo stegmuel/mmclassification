@@ -4,7 +4,7 @@ from glob import glob
 
 from .base_dataset import BaseDataset
 from .builder import DATASETS
-from utils import untar_to_dst
+from .utils import untar_to_dst
 
 
 @DATASETS.register_module()
